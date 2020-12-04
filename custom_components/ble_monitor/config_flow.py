@@ -118,7 +118,7 @@ class BLEMonitorFlow(data_entry_flow.FlowHandler):
         _LOGGER.error("_show_main_form: shouldn't be here")
 
     @callback
-    def _show_user_form(self, step_id=None, schema=None, errors=None):
+    async def async_show_user_form(self, step_id=None, schema=None, errors=None):
         option_devices = []
         option_devices.append(OPTION_LIST_DEVICE)
         option_devices.append(OPTION_ADD_DEVICE)
@@ -203,7 +203,7 @@ class BLEMonitorConfigFlow(BLEMonitorFlow, config_entries.ConfigFlow, domain=DOM
         return BLEMonitorOptionsFlow(config_entry)
 
     def _show_main_form(self, errors=None):
-        return self._show_user_form("user", DOMAIN_SCHEMA, errors or {})
+        return self.async_show_user_form("user", DOMAIN_SCHEMA, errors or {})
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
@@ -270,7 +270,7 @@ class BLEMonitorOptionsFlow(BLEMonitorFlow, config_entries.OptionsFlow):
                 vol.Optional(CONF_RESTORE_STATE, default=self.config_entry.options.get(CONF_RESTORE_STATE, DEFAULT_RESTORE_STATE)): cv.boolean,
             }
         )
-        return self._show_user_form("init", options_schema, errors or {})
+        return self.async_show_user_form("init", options_schema, errors or {})
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
