@@ -1,4 +1,5 @@
 """Config flow for BLE Monitor."""
+import asyncio
 import logging
 import re
 import voluptuous as vol
@@ -117,13 +118,24 @@ class BLEMonitorFlow(data_entry_flow.FlowHandler):
     def _show_main_form(self, errors=None):
         _LOGGER.error("_show_main_form: shouldn't be here")
 
-    @callback
-    async def async_show_user_form(self, step_id=None, schema=None, errors=None):
-        option_devices = []
-        option_devices.append(OPTION_LIST_DEVICE)
-        option_devices.append(OPTION_ADD_DEVICE)
+    async def async_get_device_list(self):
+        device_list = []
+        device_list.append(OPTION_LIST_DEVICE)
+        device_list.append(OPTION_ADD_DEVICE)
         for device in self._devices:
-            option_devices.append(device.get(CONF_MAC))
+            device_list.append(device.get(CONF_MAC))
+        return device_list
+
+    @callback
+    def _show_user_form(self, step_id=None, schema=None, errors=None):
+        option_devices = asyncio.run_coroutine_threadsafe(
+            async_get_device_list(self), hass.loop
+        ).result()
+#        option_devices = []
+#        option_devices.append(OPTION_LIST_DEVICE)
+#        option_devices.append(OPTION_ADD_DEVICE)
+#        for device in self._devices:
+#            option_devices.append(device.get(CONF_MAC))
         config_schema = schema.extend({
             vol.Optional(CONF_DEVICES, default=OPTION_LIST_DEVICE): vol.In(option_devices),
         })
@@ -203,7 +215,7 @@ class BLEMonitorConfigFlow(BLEMonitorFlow, config_entries.ConfigFlow, domain=DOM
         return BLEMonitorOptionsFlow(config_entry)
 
     def _show_main_form(self, errors=None):
-        return self.async_show_user_form("user", DOMAIN_SCHEMA, errors or {})
+        return self._show_user_form("user", DOMAIN_SCHEMA, errors or {})
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
@@ -270,7 +282,7 @@ class BLEMonitorOptionsFlow(BLEMonitorFlow, config_entries.OptionsFlow):
                 vol.Optional(CONF_RESTORE_STATE, default=self.config_entry.options.get(CONF_RESTORE_STATE, DEFAULT_RESTORE_STATE)): cv.boolean,
             }
         )
-        return self.async_show_user_form("init", options_schema, errors or {})
+        return self._show_user_form("init", options_schema, errors or {})
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
